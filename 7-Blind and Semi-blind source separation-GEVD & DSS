@@ -1,0 +1,104 @@
+close all
+clc
+clear
+
+load('pure');
+load('contaminated');
+Fs = 200;
+%%
+% part a
+title = 'Pure EEG';
+ElecName = {'CH1','CH2','CH3','CH4','CH5','CH6','CH7','CH8','CH9','CH10','CH11',...
+    'CH12','CH13','CH14','CH15','CH16','CH17','CH18','CH19'};
+plotEEG(pure,Fs,title,ElecName);
+
+title = 'Contaminated EEG';
+plotEEG(contaminated,Fs,title,ElecName);
+
+Ton = zeros(1,size(pure,2));
+t_on = floor([1*Fs:3.3*Fs,15.8*Fs:16.5*Fs,21.8*Fs:22.6*Fs]);
+Ton([1*Fs:3.3*Fs,15.8*Fs:16.5*Fs,21.8*Fs:22.6*Fs]) = 1;
+%%
+clc
+% part b /GEVD
+[X_hat,Xprim,error] = GEVD_algo_ON_OFF(pure,contaminated,t_on,Ton);
+
+fprintf('RRMSE= %d\n',error)
+plotEEG(X_hat,Fs,"EOG Signals",ElecName)
+plotEEG(Xprim,Fs,"Dnoised signal",ElecName)
+
+%%
+clc
+% part c /DSS
+[X_hat,Xprim,error] = DSS_alg_ON_OFF(contaminated,pure,Ton);
+
+fprintf('RRMSE= %d\n',error)
+plotEEG(X_hat,Fs,"EOG Signals",ElecName)
+plotEEG(Xprim,Fs,"Dnoised signal",ElecName)
+
+
+
+
+
+
+function error = RRMSE(x,y)
+x = real(x);
+y = real(y);
+error = sqrt((sum((x-y).^2,'all'))/(sum(x.^2,'all')));
+end
+
+
+
+function [X_hat,Xprim,error] = GEVD_algo_ON_OFF(pure,X,t_on,Ton)
+Cx = cov(X');
+P=zeros(19,19);
+
+for i = 1:length(t_on)
+    P=P+(X(:,t_on(i)))*(X(:,t_on(i))');
+end
+Px = P./(1/(sum(Ton))); 
+
+[V,E] = eig(Px,Cx,'vector');
+[E, index] = sort(E,'descend');
+
+V = V(:, index);
+S = (V')*X;
+S_den = S;
+S_den(2:19,:)= 0; 
+X_hat = inv(V')*S_den;
+Xprim = X-X_hat;
+
+error = RRMSE(pure,Xprim);
+end
+
+function [X_hat,Xprim,error] = DSS_alg_ON_OFF(X_org,pure,T1)
+Cx = cov(X_org');
+[V,E] = eig(Cx);
+[E,index] = sort(diag(E),'descend');
+V = V(:,index);
+D = (diag(E.^-0.5))*(V');
+Z = D*X_org;
+
+w = ones(size(X_org,1),1);
+e(1) = 0;
+itr = 100;
+
+
+for i = 1:itr
+    s1 = w'*Z;
+    s1_new =  s1.*T1;
+    w_new = Z*s1_new';
+    w = w_new ./(norm(w_new));
+    
+    s1 = w'*Z;
+    X_hat = D\(w*s1);
+    Xprim = X_org-X_hat;
+    
+    e(i+1) = RRMSE(pure,Xprim);
+    
+    if e(i+1)< e(i)
+        error = e(i+1);
+        break;
+    end
+end
+end
