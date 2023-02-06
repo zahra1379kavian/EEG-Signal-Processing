@@ -1,0 +1,144 @@
+close all
+clc
+clear
+
+%Question 1
+% part a //// Plot Data
+load('Ex1.mat');
+figure
+scatter3(X(1,:),X(2,:),X(3,:));
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Data 3D view')
+
+figure
+scatter3(X(1,:),X(2,:),X(3,:),'.','r');
+xlabel('X');ylabel('Y');zlabel('Z');
+view(0,90)
+title('Data on X-Y plane')
+
+figure
+scatter3(X(1,:),X(2,:),X(3,:),'.','r');
+xlabel('X');ylabel('Y');zlabel('Z');
+view(90,0)
+title('Data on Y-Z plane')
+
+figure
+scatter3(X(1,:),X(2,:),X(3,:),'.','r');
+xlabel('X');ylabel('Y');zlabel('Z');
+view(0,180)
+title('Data on X-Z plane')
+%%
+close all
+%part 2 /// My_PCA
+
+CX = cov(X');
+[w, landa] = eig(CX);
+[landa_sorted index] = sort(diag(landa),'descend');
+w_sorted = w(:,index);
+
+A = w_sorted';
+B = (diag(landa_sorted)^(-1/2));
+D = B*A;
+y = D*X;
+CY = D*CX*D'; %Check Output Covariance must be identity matrix
+
+source_select = y(1:3,:);
+x_den = D\source_select;
+
+figure
+vbls = {'Vec1','Vec2','Vec3'};
+biplot(w_sorted,'Scores',X','VarLabels',vbls);
+title('The Directions of maximum data variance')
+
+figure
+subplot(1,3,1)
+scatter3(X(1,:),X(2,:),X(3,:),'.','r');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Original Data')
+
+subplot(1,3,2)
+scatter3(x_den(1,:),x_den(2,:),x_den(3,:),'.','g');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Data after PCA')
+
+xnorm = zscore(x_den);
+
+subplot(1,3,3)
+scatter3(xnorm(1,:),xnorm(2,:),xnorm(3,:),'.','b');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Data after PCA+Normalization')
+%%
+close all
+%part 3 /// Matlab_PCA
+
+[coeff,score,latent] = pca(X');
+
+A = coeff';
+B = (diag(latent)^(-1/2));
+D = B*A;
+y = D*X;
+CY = D*CX*D'; %Check Output Covariance must be identity matrix
+
+source_select = y(1:3,:);
+x_den = D\source_select;
+
+figure
+vbls = {'Vec1','Vec2','Vec3'};
+biplot(w_sorted,'Scores',X','VarLabels',vbls);
+title('The Directions of maximum data variance')
+
+figure
+subplot(1,3,1)
+scatter3(X(1,:),X(2,:),X(3,:),'.','r');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Original Data')
+
+subplot(1,3,2)
+scatter3(x_den(1,:),x_den(2,:),x_den(3,:),'.','g');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Data after PCA')
+
+xnorm = zscore(x_den);
+
+subplot(1,3,3)
+scatter3(xnorm(1,:),xnorm(2,:),xnorm(3,:),'.','b');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Data after PCA+Normalization')
+%%
+close all
+%part 4 /// SVD decomposition
+
+CX = cov(X');
+[U,S,V] = svd(CX);
+
+A = U';
+B = (S)^(-1/2);
+D = B*A;
+y = D*X;
+CY = D*CX*D'; %Check Output Covariance must be identity matrix
+
+source_select = y(1:3,:);
+x_den = D\source_select;
+
+figure
+vbls = {'Vec1','Vec2','Vec3'};
+biplot(w_sorted(:,1:3),'Scores',X(1:3,:)','VarLabels',vbls);
+title('The Directions of maximum data variance')
+
+figure
+subplot(1,3,1)
+scatter3(X(1,:),X(2,:),X(3,:),'.','r');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Original Data')
+
+subplot(1,3,2)
+scatter3(x_den(1,:),x_den(2,:),x_den(3,:),'.','g');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Data after PCA')
+
+xnorm = zscore(x_den);
+
+subplot(1,3,3)
+scatter3(xnorm(1,:),xnorm(2,:),xnorm(3,:),'.','b');
+xlabel('X');ylabel('Y');zlabel('Z');
+title('Data after PCA+Normalization')
