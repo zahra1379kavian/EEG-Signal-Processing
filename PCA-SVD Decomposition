@@ -1,3 +1,4 @@
+% PCA: Principal Component Analysis// SVD: Singular Value Decomposition
 close all
 clc
 clear
