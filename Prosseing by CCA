@@ -1,0 +1,87 @@
+close all
+clc
+clear
+
+load('SSVEP_EEG');
+Fs = 250;
+ElecName = {'Pz','Oz','P7','P8','O2','O1'};
+N_trials = length(Event_samples);
+N_ch = size(SSVEP_Signal,1);
+%%
+% part a-1
+
+d = designfilt('bandpassfir','FilterOrder',2, ...
+    'CutoffFrequency1',1/Fs,'CutoffFrequency2',40/Fs);
+y = zeros(size(SSVEP_Signal));
+for i = 1:N_ch
+    y(i,:) = filtfilt(d,SSVEP_Signal(i,:));
+end
+%%
+% part a-2
+y_epoched = zeros(N_ch,5*Fs+1,N_trials);
+for i = 1:length(Event_samples)
+    y_epoched(:,:,i) = y(:,Event_samples(i):Event_samples(i)+5*Fs);
+end
+%%
+close all
+% part a-3
+for i = 1:N_trials
+    figure
+    pwelch(y_epoched(:,:,i)');
+    legend('Pz','Oz','P7','P8','O2','O1');
+    title("Power Spectral Density Trial "+num2str(i))
+end
+%%
+clc
+%part b-1
+stimulus_freq = [6.5 ,7.35 ,8.3 ,9.6 ,11.61];
+ch_num_select = 6;
+t = 0:5*Fs;
+estimate_freq = freq_label(stimulus_freq,Fs,N_trials,y_epoched,ch_num_select,t);
+
+%%
+% part b-2
+t = 0:5*Fs;
+for i = 1:N_ch
+    estimate_freq(i,:) = freq_label(stimulus_freq,Fs,N_trials,y_epoched,i,t);
+end
+%%
+clc
+% part b-3
+for i = 1:5
+    t = 0:i*Fs;
+    estimate_freq(i,:) = freq_label(stimulus_freq,Fs,N_trials,y_epoched,i,t);
+end
+
+
+%% Functions
+
+function Y = stimulus_harmonic(freq,Fs,t)
+for  i = 1:round(40/freq)
+    Y(2*i-1:2*i,:) = [sin(2.*pi.*freq.*i.*t./Fs);cos(2.*pi.*freq.*i.*t./Fs)];
+end
+end
+
+
+function estimate_freq = freq_label(stimulus_freq,Fs,N_trials,y_epoched,ch_num_select,t) %CCA algorithm
+Y.f1 = stimulus_harmonic(stimulus_freq(1),Fs,t)';
+Y.f2 = stimulus_harmonic(stimulus_freq(2),Fs,t)';
+Y.f3 = stimulus_harmonic(stimulus_freq(3),Fs,t)';
+Y.f4 = stimulus_harmonic(stimulus_freq(4),Fs,t)';
+Y.f5 = stimulus_harmonic(stimulus_freq(5),Fs,t)';
+
+r = [];
+for i=1:N_trials
+    X = y_epoched(1:ch_num_select,1:length(t),i)';
+    [~,~,r.f1(:,i)]=canoncorr(X,Y.f1(1:length(t),:));
+    [~,~,r.f2(:,i)]=canoncorr(X,Y.f2(1:length(t),:));
+    [~,~,r.f3(:,i)]=canoncorr(X,Y.f3(1:length(t),:));
+    [~,~,r.f4(:,i)]=canoncorr(X,Y.f4(1:length(t),:));
+    [~,~,r.f5(:,i)]=canoncorr(X,Y.f5(1:length(t),:));
+end
+
+A = reshape(struct2array(r),[ch_num_select,N_trials,5]);
+[M,I] = max(A(1,:,:),[],3);
+
+estimate_freq = stimulus_freq(I);
+end
